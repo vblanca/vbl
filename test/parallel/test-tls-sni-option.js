@@ -17,26 +17,6 @@ function loadPEM(n) {
   return fs.readFileSync(filenamePEM(n));
 }
 
-var serverOptions = {
-  key: loadPEM('agent2-key'),
-  cert: loadPEM('agent2-cert'),
-  SNICallback: function(servername, callback) {
-    var context = SNIContexts[servername];
-
-    // Just to test asynchronous callback
-    setTimeout(function() {
-      if (context) {
-        if (context.emptyRegression)
-          callback(null, {});
-        else
-          callback(null, tls.createSecureContext(context));
-      } else {
-        callback(null, null);
-      }
-    }, 100);
-  }
-};
-
 var SNIContexts = {
   'a.example.com': {
     key: loadPEM('agent1-key'),
@@ -83,64 +63,101 @@ var clientsOptions = [{
   rejectUnauthorized: false
 }];
 
-var serverResults = [],
-    clientResults = [],
-    serverErrors = [],
-    clientErrors = [],
-    serverError,
-    clientError;
+function test(config, done) {
+  var serverOptions = {
+    key: loadPEM('agent2-key'),
+    cert: loadPEM('agent2-cert'),
+    SNICallback: function(servername, callback) {
+      var context = SNIContexts[servername];
 
-var server = tls.createServer(serverOptions, function(c) {
-  serverResults.push(c.servername);
-});
+      if (config.compatibility) {
+        if (!context)
+          return tls.createSecureContext(serverOptions).context;
+        else if (context.emptyRegression)
+          return callback(null, {});
+        else
+          return tls.createSecureContext(context).context;
+      }
 
-server.on('clientError', function(err) {
-  serverResults.push(null);
-  serverError = err.message;
-});
-
-server.listen(serverPort, startTest);
-
-function startTest() {
-  function connectClient(i, callback) {
-    var options = clientsOptions[i];
-    clientError = null;
-    serverError = null;
-
-    var client = tls.connect(options, function() {
-      clientResults.push(
-          /Hostname\/IP doesn't/.test(client.authorizationError || ''));
-      client.destroy();
-
-      next();
-    });
-
-    client.on('error', function(err) {
-      clientResults.push(false);
-      clientError = err.message;
-      next();
-    });
-
-    function next() {
-      clientErrors.push(clientError);
-      serverErrors.push(serverError);
-
-      if (i === clientsOptions.length - 1)
-        callback();
-      else
-        connectClient(i + 1, callback);
+      // Just to test asynchronous callback
+      setTimeout(function() {
+        if (context) {
+          if (context.emptyRegression)
+            callback(null, {});
+          else
+            callback(null, tls.createSecureContext(context));
+        } else {
+          callback(null, null);
+        }
+      }, 100);
     }
   };
 
-  connectClient(0, function() {
-    server.close();
+  var serverResults = [],
+      clientResults = [],
+      serverErrors = [],
+      clientErrors = [],
+      serverError,
+      clientError;
+
+  var server = tls.createServer(serverOptions, function(c) {
+    serverResults.push(c.servername);
+  });
+
+  server.on('clientError', function(err) {
+    serverResults.push(null);
+    serverError = err.message;
+  });
+
+  server.listen(serverPort, startTest);
+
+  function startTest() {
+    function connectClient(i, callback) {
+      var options = clientsOptions[i];
+      clientError = null;
+      serverError = null;
+
+      var client = tls.connect(options, function() {
+        clientResults.push(
+            /Hostname\/IP doesn't/.test(client.authorizationError || ''));
+        client.destroy();
+
+        next();
+      });
+
+      client.on('error', function(err) {
+        clientResults.push(false);
+        clientError = err.message;
+        next();
+      });
+
+      function next() {
+        clientErrors.push(clientError);
+        serverErrors.push(serverError);
+
+        if (i === clientsOptions.length - 1)
+          callback();
+        else
+          connectClient(i + 1, callback);
+      }
+    };
+
+    connectClient(0, function() {
+      server.close(done);
+    });
+  }
+
+  process.on('exit', function() {
+    assert.deepEqual(serverResults, ['a.example.com', 'b.example.com',
+                                     'c.wrong.com', null]);
+    assert.deepEqual(clientResults, [true, true, false, false]);
+    assert.deepEqual(clientErrors, [null, null, null, "socket hang up"]);
+    assert.deepEqual(serverErrors, [null, null, null, "Invalid SNI context"]);
   });
 }
 
-process.on('exit', function() {
-  assert.deepEqual(serverResults, ['a.example.com', 'b.example.com',
-                                   'c.wrong.com', null]);
-  assert.deepEqual(clientResults, [true, true, false, false]);
-  assert.deepEqual(clientErrors, [null, null, null, "socket hang up"]);
-  assert.deepEqual(serverErrors, [null, null, null, "Invalid SNI context"]);
+// Normal
+test({}, function() {
+  // v0.10 API
+  test({ compatibility: true });
 });
