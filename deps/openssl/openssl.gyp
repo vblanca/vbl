@@ -777,7 +777,6 @@
                 'openssl/crypto/bn/asm/x86_64-gcc.c',
 
                 # No asm available
-                'openssl/crypto/bn/bn_asm.c',
                 'openssl/crypto/bf/bf_enc.c',
                 'openssl/crypto/cast/c_enc.c',
                 'openssl/crypto/camellia/cmll_misc.c',
