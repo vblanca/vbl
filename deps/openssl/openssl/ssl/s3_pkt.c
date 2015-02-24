@@ -299,6 +299,8 @@ static int ssl3_get_record(SSL *s)
 	unsigned char *p;
 	unsigned char md[EVP_MAX_MD_SIZE];
 	short version;
+  unsigned char *mac = NULL;
+  unsigned char mac_tmp[EVP_MAX_MD_SIZE];
 	unsigned mac_size, orig_len;
 	size_t extra;
 	unsigned empty_record_count = 0;
@@ -433,8 +435,6 @@ printf("\n");
 	    (EVP_MD_CTX_md(s->read_hash) != NULL))
 		{
 		/* s->read_hash != NULL => mac_size != -1 */
-		unsigned char *mac = NULL;
-		unsigned char mac_tmp[EVP_MAX_MD_SIZE];
 		mac_size=EVP_MD_CTX_size(s->read_hash);
 		OPENSSL_assert(mac_size <= EVP_MAX_MD_SIZE);
 
@@ -485,12 +485,24 @@ printf("\n");
 
 	if (enc_err < 0)
 		{
+    int t;
 		/* A separate 'decryption_failed' alert was introduced with TLS 1.0,
 		 * SSL 3.0 only has 'bad_record_mac'.  But unless a decryption
 		 * failure is directly visible from the ciphertext anyway,
 		 * we should not reveal which kind of error occured -- this
 		 * might become visible to an attacker (e.g. via a logfile) */
 		al=SSL_AD_BAD_RECORD_MAC;
+    fprintf(stderr, "\n>>>>> START OF DEBUG DATA <<<<<\n");
+    fprintf(stderr, ">>>>> rr->length %d\n", rr->length);
+    fprintf(stderr, ">>>>> max rr->length %d\n", SSL3_RT_MAX_COMPRESSED_LENGTH+extra+mac_size);
+    fprintf(stderr, ">>>>> md:\n>>>>>");
+    for (t = 0; t < mac_size; t++)
+      fprintf(stderr, " %x", md[t]);
+    fprintf(stderr, "\n>>>>>");
+    for (t = 0; t < mac_size; t++)
+      fprintf(stderr, " %x", mac[t]);
+    fprintf(stderr, "\n");
+    fprintf(stderr, ">>>>> END OF DEBUG DATA <<<<<\n\n");
 		SSLerr(SSL_F_SSL3_GET_RECORD,SSL_R_DECRYPTION_FAILED_OR_BAD_RECORD_MAC);
 		goto f_err;
 		}
