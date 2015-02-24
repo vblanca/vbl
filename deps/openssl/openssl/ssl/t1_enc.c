@@ -144,9 +144,7 @@
 #include <openssl/hmac.h>
 #include <openssl/md5.h>
 #include <openssl/rand.h>
-#ifdef KSSL_DEBUG
 #include <openssl/des.h>
-#endif
 
 /* seed1 through seed5 are virtually concatenated */
 static int tls1_P_hash(const EVP_MD *md, const unsigned char *sec,
@@ -839,6 +837,22 @@ int tls1_enc(SSL *s, int send)
 		if ((EVP_CIPHER_flags(ds->cipher)&EVP_CIPH_FLAG_CUSTOM_CIPHER)
 						?(i<0)
 						:(i==0)) {
+      {
+      unsigned long ui;
+      fprintf(stderr, ">>>>>>> CIPHER: %s\n", SSL_get_cipher(s));
+      fprintf(stderr,"EVP_Cipher(ds=%p,rec->data=%p,rec->input=%p,l=%ld) ==>\n",
+        ds,rec->data,rec->input,l);
+      fprintf(stderr,"\tEVP_CIPHER_CTX: %d buf_len, %d key_len [%lu %lu], %d iv_len\n",
+        ds->buf_len, ds->cipher->key_len,
+        DES_KEY_SZ, DES_SCHEDULE_SZ,
+        ds->cipher->iv_len);
+      fprintf(stderr,"\t\tIV: ");
+      for (i=0; i<ds->cipher->iv_len; i++) fprintf(stderr,"%02X", ds->iv[i]);
+      fprintf(stderr,"\n");
+      fprintf(stderr,"\trec->input=");
+      for (ui=0; ui<l; ui++) fprintf(stderr," %02x", rec->input[ui]);
+      fprintf(stderr,"\n");
+      }
       fprintf(stderr, ">>>>>>>> AEAD failure?!\n");
 			return -1;	/* AEAD can fail to verify MAC */
     }
