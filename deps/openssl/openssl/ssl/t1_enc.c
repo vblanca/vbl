@@ -719,8 +719,10 @@ int tls1_enc(SSL *s, int send)
 					fprintf(stderr,
 						"%s:%d: rec->data != rec->input\n",
 						__FILE__, __LINE__);
-				else if (RAND_bytes(rec->input, ivlen) <= 0)
+				else if (RAND_bytes(rec->input, ivlen) <= 0) {
+          fprintf(stderr, ">>>>>>>> NOT ENOUGH RANDOMNESS %d\n", ivlen);
 					return -1;
+        }
 				}
 			}
 		}
@@ -836,8 +838,10 @@ int tls1_enc(SSL *s, int send)
 		i = EVP_Cipher(ds,rec->data,rec->input,l);
 		if ((EVP_CIPHER_flags(ds->cipher)&EVP_CIPH_FLAG_CUSTOM_CIPHER)
 						?(i<0)
-						:(i==0))
+						:(i==0)) {
+      fprintf(stderr, ">>>>>>>> AEAD failure?!\n");
 			return -1;	/* AEAD can fail to verify MAC */
+    }
 		if (EVP_CIPHER_mode(enc) == EVP_CIPH_GCM_MODE && !send)
 			{
 			rec->data += EVP_GCM_TLS_EXPLICIT_IV_LEN;
@@ -859,6 +863,8 @@ int tls1_enc(SSL *s, int send)
 			mac_size = EVP_MD_CTX_size(s->read_hash);
 		if ((bs != 1) && !send)
 			ret = tls1_cbc_remove_padding(s, rec, bs, mac_size);
+    if (ret == -1)
+      fprintf(stderr, ">>>>>>>> FAILED TO REMOVE CBC PADDING\n");
 		if (pad && !send)
 			rec->length -= pad;
 		}
