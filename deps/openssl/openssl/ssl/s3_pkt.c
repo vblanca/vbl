@@ -498,9 +498,10 @@ printf("\n");
     fprintf(stderr, ">>>>> md:\n>>>>>");
     for (t = 0; t < mac_size; t++)
       fprintf(stderr, " %x", md[t]);
-    fprintf(stderr, "\n>>>>>");
-    for (t = 0; t < mac_size; t++)
-      fprintf(stderr, " %x", mac[t]);
+    fprintf(stderr, "\n>>>>> mac:\n>>>>>");
+    if (mac != NULL)
+      for (t = 0; t < mac_size; t++)
+        fprintf(stderr, " %x", mac[t]);
     fprintf(stderr, "\n");
     fprintf(stderr, ">>>>> END OF DEBUG DATA <<<<<\n\n");
 		SSLerr(SSL_F_SSL3_GET_RECORD,SSL_R_DECRYPTION_FAILED_OR_BAD_RECORD_MAC);
