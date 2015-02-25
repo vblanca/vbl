@@ -171,7 +171,7 @@ extern unsigned int OPENSSL_ia32cap_P[2];
 /*
  * AES-NI section
  */
-#define	AESNI_CAPABLE	0
+#define	AESNI_CAPABLE	(OPENSSL_ia32cap_P[1]&(1<<(57-32)))
 
 int aesni_set_encrypt_key(const unsigned char *userKey, int bits,
 			AES_KEY *key);
