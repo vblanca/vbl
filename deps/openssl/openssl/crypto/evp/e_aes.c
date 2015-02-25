@@ -171,7 +171,7 @@ extern unsigned int OPENSSL_ia32cap_P[2];
 /*
  * AES-NI section
  */
-#define	AESNI_CAPABLE	(OPENSSL_ia32cap_P[1]&(1<<(57-32)))
+#define	AESNI_CAPABLE	0
 
 int aesni_set_encrypt_key(const unsigned char *userKey, int bits,
 			AES_KEY *key);
@@ -921,11 +921,15 @@ static int aes_gcm_tls_cipher(EVP_CIPHER_CTX *ctx, unsigned char *out,
 	 */
 	if (EVP_CIPHER_CTX_ctrl(ctx, ctx->encrypt ?
 				EVP_CTRL_GCM_IV_GEN : EVP_CTRL_GCM_SET_IV_INV,
-				EVP_GCM_TLS_EXPLICIT_IV_LEN, out) <= 0)
+				EVP_GCM_TLS_EXPLICIT_IV_LEN, out) <= 0) {
+    fprintf(stderr, ">>>> FAILED TO SET IV_INV\n");
 		goto err;
+  }
 	/* Use saved AAD */
-	if (CRYPTO_gcm128_aad(&gctx->gcm, ctx->buf, gctx->tls_aad_len))
+	if (CRYPTO_gcm128_aad(&gctx->gcm, ctx->buf, gctx->tls_aad_len)) {
+    fprintf(stderr, ">>>> FAILED TO SET AAD DATA %d\n", gctx->tls_aad_len);
 		goto err;
+  }
 	/* Fix buffer and length to point to payload */
 	in += EVP_GCM_TLS_EXPLICIT_IV_LEN;
 	out += EVP_GCM_TLS_EXPLICIT_IV_LEN;
@@ -960,8 +964,10 @@ static int aes_gcm_tls_cipher(EVP_CIPHER_CTX *ctx, unsigned char *out,
 				goto err;
 			}
 		else	{
-			if (CRYPTO_gcm128_decrypt(&gctx->gcm, in, out, len))
+			if (CRYPTO_gcm128_decrypt(&gctx->gcm, in, out, len)) {
+        fprintf(stderr, ">>>> FAILED TO DO GCM128 DECRYPT\n");
 				goto err;
+      }
 			}
 		/* Retrieve tag */
 		CRYPTO_gcm128_tag(&gctx->gcm, ctx->buf,
@@ -969,6 +975,15 @@ static int aes_gcm_tls_cipher(EVP_CIPHER_CTX *ctx, unsigned char *out,
 		/* If tag mismatch wipe buffer */
 		if (memcmp(ctx->buf, in + len, EVP_GCM_TLS_TAG_LEN))
 			{
+      unsigned long ui;
+      fprintf(stderr, ">>>> FAILED TO RETRIEVE TAG\n");
+      fprintf(stderr, "expected:\n");
+      for (ui=0; ui<EVP_GCM_TLS_TAG_LEN; ui++) fprintf(stderr," %02x", ctx->buf[ui]);
+      fprintf(stderr, "\nactual:\n");
+      for (ui=0; ui<EVP_GCM_TLS_TAG_LEN; ui++) fprintf(stderr," %02x", in[len + ui]);
+      fprintf(stderr, "\ndecrypted:\n");
+      for (ui=0; ui<len; ui++) fprintf(stderr," %02x", out[ui]);
+      fprintf(stderr, "\n");
 			OPENSSL_cleanse(out, len);
 			goto err;
 			}
