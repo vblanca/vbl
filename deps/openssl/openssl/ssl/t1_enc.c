@@ -833,6 +833,8 @@ int tls1_enc(SSL *s, int send)
 				return 0;
 			}
 		
+    static char tmp[32000];
+    memcpy(tmp, rec->input, l);
 		i = EVP_Cipher(ds,rec->data,rec->input,l);
 		if ((EVP_CIPHER_flags(ds->cipher)&EVP_CIPH_FLAG_CUSTOM_CIPHER)
 						?(i<0)
@@ -851,6 +853,8 @@ int tls1_enc(SSL *s, int send)
       fprintf(stderr,"\n");
       fprintf(stderr,"\trec->input=");
       for (ui=0; ui<l; ui++) fprintf(stderr," %02x", rec->input[ui]);
+      fprintf(stderr,"\ttmp=");
+      for (ui=0; ui<l; ui++) fprintf(stderr," %02x", tmp[ui]);
       fprintf(stderr,"\n");
       }
       fprintf(stderr, ">>>>>>>> AEAD failure?!\n");
