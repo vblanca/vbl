@@ -5,6 +5,8 @@
 #include "util.h"
 #include "util-inl.h"
 
+#include <string.h>
+
 namespace node {
 
 class NodeBIO {
@@ -94,6 +96,7 @@ class NodeBIO {
                                   len_(len),
                                   next_(nullptr) {
       data_ = new char[len];
+      memset(data_, 0xaa, len);
     }
 
     ~Buffer() {
