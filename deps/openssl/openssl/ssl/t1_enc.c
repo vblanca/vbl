@@ -686,6 +686,8 @@ int tls1_enc(SSL *s, int send)
 	unsigned long l;
 	int bs,i,j,k,pad=0,ret,mac_size=0;
 	const EVP_CIPHER *enc;
+  unsigned char buf[13],*seq;
+
 
 	if (send)
 		{
@@ -756,8 +758,6 @@ int tls1_enc(SSL *s, int send)
 
 		if (EVP_CIPHER_flags(ds->cipher)&EVP_CIPH_FLAG_AEAD_CIPHER)
 			{
-			unsigned char buf[13],*seq;
-
 			seq = send?s->s3->write_sequence:s->s3->read_sequence;
 
 			if (s->version == DTLS1_VERSION || s->version == DTLS1_BAD_VER)
@@ -874,6 +874,9 @@ int tls1_enc(SSL *s, int send)
       for (ui=0; ui<l; ui++) fprintf(stderr," %02x", rec->input[ui]);
       fprintf(stderr,"\ttmp=");
       for (ui=0; ui<l; ui++) fprintf(stderr," %02x", tmp[ui]);
+      fprintf(stderr,"\n");
+      fprintf(stderr,"buf=");
+      for (ui=0; ui<sizeof(buf); ui++) fprintf(stderr," %02x", buf[ui]);
       fprintf(stderr,"\n");
       }
       fprintf(stderr, ">>>>>>>> AEAD failure?!\n");
