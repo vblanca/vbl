@@ -833,7 +833,7 @@ int tls1_enc(SSL *s, int send)
 				return 0;
 			}
 		
-    static char tmp[32000];
+    static unsigned char tmp[32000];
     memcpy(tmp, rec->input, l);
 		i = EVP_Cipher(ds,rec->data,rec->input,l);
 		if ((EVP_CIPHER_flags(ds->cipher)&EVP_CIPH_FLAG_CUSTOM_CIPHER)
@@ -841,7 +841,26 @@ int tls1_enc(SSL *s, int send)
 						:(i==0)) {
       {
       unsigned long ui;
+      int num;
+      unsigned char *p1,*p2=NULL;
+
       fprintf(stderr, ">>>>>>> CIPHER: %s\n", SSL_get_cipher(s));
+      fprintf(stderr, "client random\n");
+      { int z; for (z=0; z<SSL3_RANDOM_SIZE; z++) fprintf(stderr, "%02X%c",s->s3->client_random[z],((z+1)%16)?' ':'\n'); }
+      fprintf(stderr, "server random\n");
+      { int z; for (z=0; z<SSL3_RANDOM_SIZE; z++) fprintf(stderr, "%02X%c",s->s3->server_random[z],((z+1)%16)?' ':'\n'); }
+      fprintf(stderr, "pre-master\n");
+      { int z; for (z=0; z<s->session->master_key_length; z++) fprintf(stderr, "%02X%c",s->session->master_key[z],((z+1)%16)?' ':'\n'); }
+      fprintf(stderr, "\nkey block\n");
+
+      num=EVP_CIPHER_key_length(enc)+64+EVP_CIPHER_iv_length(enc);
+      p1=(unsigned char *)OPENSSL_malloc(num);
+      p2=(unsigned char *)OPENSSL_malloc(num);
+      tls1_generate_key_block(s,p1,p2,num);
+      { int z; for (z=0; z<num; z++) fprintf(stderr, "%02X%c",p1[z],((z+1)%16)?' ':'\n'); }
+      OPENSSL_free(p1);
+      OPENSSL_free(p2);
+
       fprintf(stderr,"EVP_Cipher(ds=%p,rec->data=%p,rec->input=%p,l=%ld) ==>\n",
         ds,rec->data,rec->input,l);
       fprintf(stderr,"\tEVP_CIPHER_CTX: %d buf_len, %d key_len [%lu %lu], %d iv_len\n",
