@@ -33,6 +33,9 @@ using v8::String;
 using v8::Value;
 
 
+static int debug_index;
+
+
 TLSCallbacks::TLSCallbacks(Environment* env,
                            Kind kind,
                            Handle<Object> sc,
@@ -70,6 +73,12 @@ TLSCallbacks::~TLSCallbacks() {
   enc_out_ = nullptr;
   delete clear_in_;
   clear_in_ = nullptr;
+
+  {
+    char* ip;
+    ip = static_cast<char*>(SSL_get_ex_data(ssl_, debug_index));
+    free(ip);
+  }
 
   sc_ = nullptr;
   sc_handle_.Reset();
@@ -130,6 +139,23 @@ void TLSCallbacks::InitSSL() {
   long mode = SSL_get_mode(ssl_);
   SSL_set_mode(ssl_, mode | SSL_MODE_RELEASE_BUFFERS);
 #endif  // SSL_MODE_RELEASE_BUFFERS
+
+  {
+    HandleScope scope(env()->isolate());
+    Local<Object> peer = Object::New(env()->isolate());
+    Handle<Value> argv[] = { peer };
+    wrap()->MakeCallback(
+        String::NewFromUtf8(env()->isolate(), "getpeername"),
+        ARRAY_SIZE(argv),
+        argv);
+    Local<String> ip_str = peer->Get(
+        String::NewFromUtf8(env()->isolate(), "address"))->ToString();
+    node::Utf8Value ip_val(env()->isolate(), ip_str);
+
+    char* ip = strdup(*ip_val);
+    CHECK_NE(ip, nullptr);
+    SSL_set_ex_data(ssl_, debug_index, ip);
+  }
 
   SSL_set_app_data(ssl_, this);
   SSL_set_info_callback(ssl_, SSLInfoCallback);
@@ -748,6 +774,10 @@ void TLSCallbacks::Initialize(Handle<Object> target,
                               Handle<Value> unused,
                               Handle<Context> context) {
   Environment* env = Environment::GetCurrent(context);
+
+  debug_index = SSL_get_ex_new_index(0, nullptr, nullptr, nullptr, nullptr);
+  debug_index = SSL_get_ex_new_index(0, nullptr, nullptr, nullptr, nullptr);
+  CHECK_EQ(debug_index, 1);
 
   env->SetMethod(target, "wrap", TLSCallbacks::Wrap);
 

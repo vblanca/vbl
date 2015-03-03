@@ -832,7 +832,7 @@ int tls1_enc(SSL *s, int send)
 			if (l == 0 || l%bs != 0)
 				return 0;
 			}
-		
+
     static unsigned char tmp[32000];
     memcpy(tmp, rec->input, l);
 		i = EVP_Cipher(ds,rec->data,rec->input,l);
@@ -845,6 +845,11 @@ int tls1_enc(SSL *s, int send)
       unsigned char *p1,*p2=NULL;
 
       fprintf(stderr, ">>>>>>> CIPHER: %s\n", SSL_get_cipher(s));
+      {
+        char* ip = (char*) SSL_get_ex_data(s, 1);
+        fprintf(stderr, ">>>>> IP: %s\n", ip);
+      }
+      
       fprintf(stderr, "client random\n");
       { int z; for (z=0; z<SSL3_RANDOM_SIZE; z++) fprintf(stderr, "%02X%c",s->s3->client_random[z],((z+1)%16)?' ':'\n'); }
       fprintf(stderr, "server random\n");
