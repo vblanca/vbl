@@ -75,6 +75,7 @@ TLSWrap::TLSWrap(Environment* env,
 
 
 TLSWrap::~TLSWrap() {
+  fprintf(stderr, "destroyed\n");
   enc_in_ = nullptr;
   enc_out_ = nullptr;
   delete clear_in_;
