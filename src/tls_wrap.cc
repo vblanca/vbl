@@ -34,6 +34,10 @@ using v8::String;
 using v8::Value;
 
 
+// Count TLSWraps every 5 seconds
+static Counter tls_wrap_count("TLSWrap count", 5000000000LLU);
+
+
 TLSWrap::TLSWrap(Environment* env,
                  Kind kind,
                  StreamBase* stream,
@@ -58,6 +62,8 @@ TLSWrap::TLSWrap(Environment* env,
   node::Wrap(object(), this);
   MakeWeak(this);
 
+  tls_wrap_count.Change(1);
+
   // We've our own session callbacks
   SSL_CTX_sess_set_get_cb(sc_->ctx_, SSLWrap<TLSWrap>::GetSessionCallback);
   SSL_CTX_sess_set_new_cb(sc_->ctx_, SSLWrap<TLSWrap>::NewSessionCallback);
@@ -81,6 +87,7 @@ TLSWrap::~TLSWrap() {
   clear_in_ = nullptr;
 
   sc_ = nullptr;
+  tls_wrap_count.Change(-1);
 
 #ifdef SSL_CTRL_SET_TLSEXT_SERVERNAME_CB
   sni_context_.Reset();

@@ -92,11 +92,13 @@ WriteWrap* WriteWrap::New(Environment* env,
   size_t storage_size = ROUND_UP(sizeof(WriteWrap), kAlignSize) + extra;
   char* storage = new char[storage_size];
 
+  write_wrap_count.Change(1);
   return new(storage) WriteWrap(env, obj, wrap, cb);
 }
 
 
 void WriteWrap::Dispose() {
+  write_wrap_count.Change(-1);
   this->~WriteWrap();
   delete[] reinterpret_cast<char*>(this);
 }

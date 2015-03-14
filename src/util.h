@@ -1,11 +1,13 @@
 #ifndef SRC_UTIL_H_
 #define SRC_UTIL_H_
 
+#include "uv.h"
 #include "v8.h"
 
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 
 namespace node {
 
@@ -193,6 +195,36 @@ class Utf8Value {
     size_t length_;
     char* str_;
     char str_st_[1024];
+};
+
+class Counter {
+ public:
+  Counter(const char* prefix, uint64_t interval)
+      : prefix_(prefix), value_(0), interval_(interval) {
+    last_ = uv_hrtime();
+  }
+
+  inline void Change(int delta) {
+    uint64_t now;
+
+    value_ += delta;
+    now = uv_hrtime();
+    if (now - last_ < interval_)
+      return;
+
+    last_ = now;
+    fprintf(stderr,
+            ">>>> \"%llu\" counter \"%s\", value \"%d\"\n",
+            last_,
+            prefix_,
+            value_);
+  }
+
+ private:
+  const char* prefix_;
+  int value_;
+  uint64_t interval_;
+  uint64_t last_;
 };
 
 }  // namespace node

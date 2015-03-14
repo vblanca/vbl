@@ -6,10 +6,13 @@
 #include "req-wrap.h"
 #include "req-wrap-inl.h"
 #include "node.h"
+#include "util.h"
 
 #include "v8.h"
 
 namespace node {
+
+static Counter write_wrap_count("WriteWrap count", 5000000000LLU);
 
 // Forward declarations
 class StreamBase;
