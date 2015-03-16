@@ -46,6 +46,8 @@ using v8::WeakCallbackData;
 using v8::kExternalUint8Array;
 
 
+static Counter smalloc_count("smalloc count", 5000000000LLU);
+
 class CallbackInfo {
  public:
   static inline void Free(char* data, void* hint);
@@ -103,10 +105,12 @@ CallbackInfo::CallbackInfo(Isolate* isolate,
   persistent_.SetWeak(this, WeakCallback);
   persistent_.SetWrapperClassId(ALLOC_ID);
   persistent_.MarkIndependent();
+  smalloc_count.Change(1);
 }
 
 
 CallbackInfo::~CallbackInfo() {
+  smalloc_count.Change(-1);
   persistent_.Reset();
 }
 
